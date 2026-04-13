@@ -6,3 +6,7 @@ dist/
 build/
 .DS_Store
 server/uploads/
+venv/
+__pycache__/
+*.pyc
+

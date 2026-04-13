@@ -11,7 +11,10 @@ const medicalRecordSchema = new mongoose.Schema({
         dosage: { type: String, required: true }, // e.g., "500 mg"
         frequency: { type: String, required: true }, // e.g., "2 times/day"
         duration: { type: String, required: true }, // e.g., "5 days"
-        system: { type: String, required: true, enum: ['Allopathy', 'Ayurveda', 'Siddha'] }
+        system: { type: String, required: true, enum: ['Allopathy', 'Ayurveda', 'Siddha'] },
+        therapeuticClass: { type: String },
+        arushCode: { type: String },
+        ayurvedaEquivalent: { type: String }
     }],
     notes: { type: String },
     visitDate: { type: Date, default: Date.now }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { User, FileText, Activity, LogOut, Bell, Download, Calendar, Pill, Stethoscope, File, Clock, ShieldCheck, ChevronRight } from 'lucide-react';
+import { User, FileText, Activity, LogOut, Bell, Download, Calendar, Pill, Stethoscope, File, Clock, ShieldCheck, ChevronRight, LayoutDashboard, Brain, Upload } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { motion } from 'framer-motion';
@@ -9,8 +9,11 @@ const UserDashboard = () => {
     const navigate = useNavigate();
     const [records, setRecords] = useState([]);
     const [reports, setReports] = useState([]);
+    const [aiResults, setAiResults] = useState([]); // Brain Tumor
+    const [neuroResults, setNeuroResults] = useState([]); // Neuro Risk
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('medical'); // 'medical', 'reports', 'timeline'
+    const [reportSubTab, setReportSubTab] = useState('files'); // 'files', 'ai'
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -26,12 +29,16 @@ const UserDashboard = () => {
                     navigate('/login');
                     return;
                 }
-                const [recordsRes, reportsRes] = await Promise.all([
+                const [recordsRes, reportsRes, aiRes, neuroRes] = await Promise.all([
                     axios.get('http://localhost:5000/api/records/history', { headers: { Authorization: token } }),
-                    axios.get('http://localhost:5000/api/reports', { headers: { Authorization: token } })
+                    axios.get('http://localhost:5000/api/reports', { headers: { Authorization: token } }),
+                    axios.get(`http://localhost:5000/api/ai/brain-tumor/history?healthId=${user.healthId}`, { headers: { Authorization: token } }),
+                    axios.get('http://localhost:5000/api/ai/neuro-risk/history', { headers: { Authorization: token } })
                 ]);
                 setRecords(recordsRes.data);
                 setReports(reportsRes.data);
+                setAiResults(aiRes.data);
+                setNeuroResults(neuroRes.data);
             } catch (err) {
                 console.error("Failed to fetch data");
                 // toast.error("Session expired or network error");
@@ -59,7 +66,7 @@ const UserDashboard = () => {
         <div className="min-h-screen bg-slate-50 flex font-sans">
             {/* Sidebar */}
             <aside className="w-72 bg-white border-r border-slate-200 fixed h-full z-20 hidden lg:flex flex-col">
-                <div className="p-8">
+                <div className="p-6 border-b border-dark/50">
                     <div className="flex items-center gap-3 mb-10">
                         <div className="bg-primary p-2.5 rounded-xl shadow-lg shadow-primary/30">
                             <Activity className="h-6 w-6 text-white" />
@@ -70,38 +77,46 @@ const UserDashboard = () => {
                         </div>
                     </div>
                     
-                    <nav className="space-y-2">
+                    <nav className="space-y-1">
+                        <button 
+                            onClick={() => { setActiveTab('dashboard'); navigate('/user-dashboard'); }} 
+                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${activeTab === 'dashboard' ? 'bg-primary text-white' : 'text-slate-500 hover:bg-slate-50'}`}
+                        >
+                            <LayoutDashboard size={18} /> 
+                            <span>Dashboard</span>
+                        </button>
+
                         <button 
                             onClick={() => setActiveTab('medical')} 
-                            className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl font-medium transition-all duration-200 group ${activeTab === 'medical' ? 'bg-primary text-white shadow-md shadow-primary/20' : 'text-slate-500 hover:bg-slate-50 hover:text-dark'}`}
+                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${activeTab === 'medical' ? 'bg-primary text-white' : 'text-slate-500 hover:bg-slate-50'}`}
                         >
-                            <FileText size={20} className={activeTab === 'medical' ? 'text-white' : 'text-slate-400 group-hover:text-primary transition-colors'} /> 
-                            <span>Medical History</span>
-                            {activeTab === 'medical' && <ChevronRight size={16} className="ml-auto opacity-70" />}
+                            <FileText size={18} /> 
+                            <span>My Health Records</span>
                         </button>
                         
                         <button 
-                            onClick={() => setActiveTab('reports')} 
-                            className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl font-medium transition-all duration-200 group ${activeTab === 'reports' ? 'bg-primary text-white shadow-md shadow-primary/20' : 'text-slate-500 hover:bg-slate-50 hover:text-dark'}`}
+                            onClick={() => navigate('/user/upload-reports')} 
+                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 text-slate-500 hover:bg-slate-50`}
                         >
-                            <File size={20} className={activeTab === 'reports' ? 'text-white' : 'text-slate-400 group-hover:text-purple-500 transition-colors'} /> 
-                            <span>Digital Reports</span>
-                            {activeTab === 'reports' && <ChevronRight size={16} className="ml-auto opacity-70" />}
+                            <Upload size={18} /> 
+                            <span>Upload Reports</span>
                         </button>
 
-                        <div className="pt-4 mt-4 border-t border-slate-100">
-                             <div className="px-5 py-3 rounded-xl bg-slate-50 border border-slate-100">
-                                <p className="text-xs font-bold text-slate-400 uppercase mb-2">My Stats</p>
-                                <div className="flex justify-between items-center mb-2">
-                                    <span className="text-sm text-secondary">Visits</span>
-                                    <span className="text-sm font-bold text-dark">{records.length}</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-sm text-secondary">Reports</span>
-                                    <span className="text-sm font-bold text-dark">{reports.length}</span>
-                                </div>
-                             </div>
-                        </div>
+                        <button 
+                            onClick={() => navigate('/user/ai-insights')} 
+                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 text-purple-600 bg-purple-50 hover:bg-purple-100`}
+                        >
+                            <Brain size={18} /> 
+                            <span>AI Health Insights</span>
+                        </button>
+
+                        <button 
+                            onClick={() => setActiveTab('prescriptions')} 
+                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${activeTab === 'prescriptions' ? 'bg-primary text-white' : 'text-slate-500 hover:bg-slate-50'}`}
+                        >
+                            <Pill size={18} /> 
+                            <span>Prescriptions</span>
+                        </button>
                     </nav>
                 </div>
 
@@ -168,14 +183,29 @@ const UserDashboard = () => {
                             </div>
                         </div>
 
-                        {/* Quick AI Status (Static for now) */}
+                        {/* Quick AI Status */}
                         <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-2xl w-full md:w-auto min-w-[200px]">
-                            <p className="text-slate-400 text-xs font-bold uppercase mb-2">Neurological Risk (AI)</p>
-                            <div className="flex items-center gap-3">
-                                <div className="h-3 w-3 bg-emerald-500 rounded-full animate-pulse"></div>
-                                <span className="text-2xl font-bold text-white">Low Risk</span>
-                            </div>
-                            <p className="text-xs text-slate-500 mt-2">Last updated: Just now</p>
+                            <p className="text-slate-400 text-xs font-bold uppercase mb-2">Brain Tumor Analysis</p>
+                            {aiResults.length > 0 ? (
+                                <div>
+                                    <div className="flex items-center gap-3">
+                                        <div className={`h-3 w-3 rounded-full animate-pulse ${aiResults[0].tumorType === 'No Tumor' ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+                                        <span className="text-xl font-bold text-white">{aiResults[0].tumorType}</span>
+                                    </div>
+                                    <p className="text-xs text-slate-500 mt-2">
+                                        Confidence: {(aiResults[0].confidence * 100).toFixed(1)}% <br/>
+                                        Date: {new Date(aiResults[0].createdAt).toLocaleDateString()}
+                                    </p>
+                                </div>
+                            ) : (
+                                <div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-3 w-3 bg-slate-500 rounded-full"></div>
+                                        <span className="text-xl font-bold text-slate-400">No Data</span>
+                                    </div>
+                                    <p className="text-xs text-slate-500 mt-2">No analysis records found.</p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </motion.div>
@@ -236,14 +266,43 @@ const UserDashboard = () => {
                                                     </h4>
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                         {record.medicines && record.medicines.map((med, idx) => (
-                                                            <div key={idx} className="bg-slate-50 hover:bg-slate-100 transition p-4 rounded-xl border border-slate-100 flex justify-between items-center group-hover:border-primary/10">
-                                                                <div>
-                                                                    <div className="font-bold text-dark">{med.name}</div>
-                                                                    <div className="text-xs text-secondary mt-1">{med.dosage} • {med.frequency}</div>
+                                                            <div key={idx} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-3 group-hover:border-primary/20">
+                                                                <div className="flex justify-between items-start border-b border-slate-50 pb-3">
+                                                                    <div>
+                                                                        <div className="font-bold text-dark text-base flex items-center gap-2 mb-1">
+                                                                            {idx + 1}️⃣ {med.name}
+                                                                        </div>
+                                                                        <div className="text-secondary text-sm">Dosage: {med.dosage} – {med.frequency}</div>
+                                                                    </div>
+                                                                    <div className="text-right">
+                                                                        <div className="text-xs text-slate-400 mt-1">{med.duration}</div>
+                                                                    </div>
                                                                 </div>
-                                                                <div className="text-right">
-                                                                    <div className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-md">{med.system}</div>
-                                                                    <div className="text-xs text-slate-400 mt-1">{med.duration}</div>
+                                                                
+                                                                <div className="grid grid-cols-1 gap-2 text-sm text-slate-600 mt-1">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-slate-400 font-medium w-32 shrink-0">Medical System:</span>
+                                                                        <span className="font-medium text-dark">{med.system}</span>
+                                                                    </div>
+                                                                    {med.therapeuticClass && (
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-slate-400 font-medium w-32 shrink-0">Therapeutic Class:</span>
+                                                                            <span className="font-medium text-dark">{med.therapeuticClass}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {med.arushCode && (
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-slate-400 font-medium w-32 shrink-0">ARUSH Code:</span>
+                                                                            <span className="font-bold text-emerald-600">{med.arushCode}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {med.ayurvedaEquivalent && (
+                                                                        <div className="mt-2 bg-amber-50/70 p-3 rounded-lg border border-amber-100/50 flex flex-col md:flex-row md:items-center gap-1 md:gap-2">
+                                                                            <span className="text-slate-500 font-bold shrink-0">Ayurveda Equivalent:</span>
+                                                                            <span className="text-amber-700 italic font-medium">{med.ayurvedaEquivalent}</span>
+                                                                            <span className="text-[10px] text-amber-600/60 uppercase tracking-wider font-bold md:ml-auto">(Equivalent Reference)</span>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         ))}
@@ -271,45 +330,118 @@ const UserDashboard = () => {
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.4 }}
                     >
+                         <div className="flex items-center gap-4 mb-8">
+                            <button 
+                                onClick={() => setReportSubTab('files')}
+                                className={`px-5 py-2 rounded-full text-sm font-bold transition ${reportSubTab === 'files' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
+                            >
+                                Uploaded Documents
+                            </button>
+                            <button 
+                                onClick={() => setReportSubTab('ai')}
+                                className={`px-5 py-2 rounded-full text-sm font-bold transition ${reportSubTab === 'ai' ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
+                            >
+                                AI Generated Reports
+                            </button>
+                        </div>
+
                         {loading ? (
                             <div className="flex items-center justify-center py-20">
                                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                             </div>
-                        ) : reports.length === 0 ? (
-                            <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-slate-200">
-                                <File className="h-10 w-10 text-slate-300 mx-auto mb-4" />
-                                <h3 className="text-xl font-bold text-dark">No Reports</h3>
-                                <p className="text-slate-500">Reports uploaded by medical pros will show here.</p>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                {reports.map((report) => (
-                                    <div key={report._id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col h-full group">
-                                        <div className="flex items-start justify-between mb-4">
-                                            <div className="bg-blue-50 p-3.5 rounded-2xl text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300">
-                                                <File size={24} />
-                                            </div>
-                                            <span className="px-3 py-1 bg-slate-50 rounded-lg text-xs font-bold text-slate-500 uppercase tracking-tight">
-                                                {report.reportType}
-                                            </span>
+                        ) : reportSubTab === 'files' ? (
+                            reports.length === 0 ? (
+                                <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-slate-200">
+                                    <File className="h-10 w-10 text-slate-300 mx-auto mb-4" />
+                                    <h3 className="text-xl font-bold text-dark">No Uploaded Reports</h3>
+                                    <p className="text-slate-500">Reports uploaded by medical pros will show here.</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                     {/* Upload Report - Patient Action */}
+                                    <div className="bg-white p-6 rounded-2xl shadow-sm border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-center hover:border-primary/50 transition cursor-pointer group">
+                                        <div className="bg-slate-50 p-4 rounded-full mb-4 group-hover:bg-primary/10 transition">
+                                            <FileText className="h-8 w-8 text-slate-400 group-hover:text-primary transition" />
                                         </div>
-                                        
-                                        <div className="mb-4 flex-1">
-                                            <h4 className="font-bold text-dark mb-1 line-clamp-1" title={report.fileName}>{report.fileName}</h4>
-                                            <p className="text-xs text-secondary mt-2">
-                                                <span className="block font-semibold text-slate-700">Dr. {report.doctorName}</span>
-                                                <span className="block mt-0.5">{formatDate(report.uploadDate)}</span>
-                                            </p>
-                                        </div>
-
+                                        <h3 className="font-bold text-dark">Upload New Report</h3>
+                                        <p className="text-xs text-secondary mt-1 mb-4">Add your lab results or past prescriptions</p>
                                         <button 
-                                            onClick={() => downloadReport(report.filePath)}
-                                            className="w-full py-3 rounded-xl border border-slate-200 font-bold text-sm text-secondary hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-all flex items-center justify-center gap-2"
+                                            onClick={() => navigate('/user/upload-reports')} 
+                                            className="text-primary text-sm font-bold bg-primary/5 px-4 py-2 rounded-lg hover:bg-primary hover:text-white transition"
                                         >
-                                            <Download size={16} /> Download
+                                            Select File
                                         </button>
                                     </div>
-                                ))}
+
+                                    {reports.map((report) => (
+                                        <div key={report._id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col h-full group">
+                                            <div className="flex items-start justify-between mb-4">
+                                                <div className="bg-blue-50 p-3.5 rounded-2xl text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300">
+                                                    <File size={24} />
+                                                </div>
+                                                <span className="px-3 py-1 bg-slate-50 rounded-lg text-xs font-bold text-slate-500 uppercase tracking-tight">
+                                                    {report.reportType}
+                                                </span>
+                                            </div>
+                                            
+                                            <div className="mb-4 flex-1">
+                                                <h4 className="font-bold text-dark mb-1 line-clamp-1" title={report.fileName}>{report.fileName}</h4>
+                                                <p className="text-xs text-secondary mt-2">
+                                                    <span className="block font-semibold text-slate-700">Dr. {report.doctorName}</span>
+                                                    <span className="block mt-0.5">{formatDate(report.uploadDate)}</span>
+                                                </p>
+                                            </div>
+    
+                                            <button 
+                                                onClick={() => downloadReport(report.filePath)}
+                                                className="w-full py-3 rounded-xl border border-slate-200 font-bold text-sm text-secondary hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-all flex items-center justify-center gap-2"
+                                            >
+                                                <Download size={16} /> Download
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )
+                        ) : (
+                            // AI Reports
+                            <div className="space-y-6">
+                                <h3 className="text-lg font-bold text-dark">Neurological Risk Assessments</h3>
+                                {neuroResults.length === 0 ? (
+                                    <div className="p-8 bg-white border border-dashed border-slate-200 rounded-2xl text-center text-slate-400">
+                                        No AI risk reports generated yet.
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        {neuroResults.map((res) => (
+                                            <div key={res._id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition">
+                                                <div className="flex justify-between items-start mb-4">
+                                                    <div className="bg-purple-50 p-3 rounded-xl text-purple-600">
+                                                        <ShieldCheck size={24} />
+                                                    </div>
+                                                    <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${res.source === 'Patient' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                                                        {res.source === 'Patient' ? 'Self-Check' : 'Doctor Check'}
+                                                    </span>
+                                                </div>
+                                                <h4 className="font-bold text-dark mb-1">{res.riskLevel} Risk</h4>
+                                                <p className="text-xs text-slate-400 mb-4">{new Date(res.generatedDate).toLocaleDateString()}</p>
+                                                
+                                                <div className="flex flex-wrap gap-2 mb-4">
+                                                    {res.factors.slice(0, 2).map((f, i) => (
+                                                        <span key={i} className="text-[10px] bg-slate-50 px-2 py-1 rounded text-secondary">{f}</span>
+                                                    ))}
+                                                    {res.factors.length > 2 && <span className="text-[10px] bg-slate-50 px-2 py-1 rounded text-secondary">+{res.factors.length - 2} more</span>}
+                                                </div>
+
+                                                <div className={`text-xs p-2 rounded-lg ${
+                                                    res.riskLevel === 'High' ? 'bg-red-50 text-red-700' : 
+                                                    res.riskLevel === 'Moderate' ? 'bg-orange-50 text-orange-700' : 'bg-green-50 text-green-700'
+                                                }`}>
+                                                    Status: <strong>{res.riskLevel}</strong>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         )}
                     </motion.div>

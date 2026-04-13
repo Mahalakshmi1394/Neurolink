@@ -59,7 +59,7 @@ exports.registerUser = async (req, res) => {
 
 exports.registerDoctor = async (req, res) => {
     try {
-        const { name, specialization, hospital, registrationId, email, password } = req.body;
+        const { name, specialization, hospital, registrationId, licenseId, email, password } = req.body;
 
         let doctor = await Doctor.findOne({ email });
         if (doctor) return res.status(400).json({ message: 'Doctor already exists' });
@@ -72,6 +72,7 @@ exports.registerDoctor = async (req, res) => {
             specialization,
             hospital,
             registrationId,
+            licenseId,
             email,
             password: hashedPassword,
             isApproved: false // Requires admin approval logic if needed, or default true for demo

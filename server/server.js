@@ -8,7 +8,11 @@ connectDB();
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+    origin: '*', // Allow all origins for dev simplicity
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
 app.get('/', (req, res) => {
@@ -19,6 +23,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/records', require('./routes/recordRoutes'));
 app.use('/api/reports', require('./routes/reportRoutes'));
+app.use('/api/ai', require('./routes/aiRoutes'));
 app.use('/uploads', express.static('uploads'));
 
 const PORT = process.env.PORT || 5000;

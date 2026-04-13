@@ -1,8 +1,51 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Users, Search, Stethoscope, FilePlus, LogOut, ChevronRight, PlusCircle, UserCheck, Trash2, Upload, FileText, Clock, Pill } from 'lucide-react';
+import { LayoutDashboard, Users, Search, Stethoscope, FilePlus, LogOut, ChevronRight, PlusCircle, UserCheck, Trash2, Upload, FileText, Clock, Pill, Brain, Activity } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
+
+const medicineKnowledgeBase = {
+    'paracetamol': {
+        therapeuticClass: 'Analgesic / Antipyretic',
+        arushCode: 'AY-12345',
+        ayurvedaEquivalent: 'Sudarshan Churna'
+    },
+    'acetaminophen': {
+        therapeuticClass: 'Analgesic / Antipyretic',
+        arushCode: 'AY-11203',
+        ayurvedaEquivalent: 'Sudarshan Churna'
+    },
+    'sudarshan churna': {
+        therapeuticClass: 'Analgesic / Antipyretic',
+        arushCode: 'AY-12345',
+        ayurvedaEquivalent: 'Paracetamol (Allopathy Equivalent)'
+    },
+    'nilavembu kudineer': {
+        therapeuticClass: 'Analgesic / Antipyretic',
+        arushCode: 'AY-12345',
+        ayurvedaEquivalent: 'Sudarshan Churna'
+    },
+    'amoxicillin': {
+        therapeuticClass: 'Antibiotic',
+        arushCode: 'AY-77889',
+        ayurvedaEquivalent: 'Neem/Haridra formulation'
+    },
+    'metformin': {
+        therapeuticClass: 'Anti-diabetic',
+        arushCode: 'AY-44556',
+        ayurvedaEquivalent: 'Meshashringi (Gymnema)'
+    },
+    'meshashringi': {
+        therapeuticClass: 'Anti-diabetic',
+        arushCode: 'AY-44556',
+        ayurvedaEquivalent: 'Metformin (Allopathy Equivalent)'
+    },
+    'calamine lotion': {
+        therapeuticClass: 'Skin Soothing / Anti-itch',
+        arushCode: 'AY-45721',
+        ayurvedaEquivalent: 'Chandana Lepa'
+    }
+};
 
 const DoctorDashboard = () => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -17,7 +60,7 @@ const DoctorDashboard = () => {
     
     // Prescription Form State
     const [diagnosis, setDiagnosis] = useState('');
-    const [medicines, setMedicines] = useState([{ name: '', dosage: '', frequency: '', duration: '', system: 'Allopathy' }]);
+    const [medicines, setMedicines] = useState([{ name: '', dosage: '', frequency: '', duration: '', system: 'Allopathy', therapeuticClass: '', arushCode: '', ayurvedaEquivalent: '' }]);
     const [notes, setNotes] = useState('');
 
     // Report Upload State
@@ -26,6 +69,11 @@ const DoctorDashboard = () => {
     const [uploading, setUploading] = useState(false);
 
     const [loading, setLoading] = useState(false);
+
+    // Brain Tumor Analysis State
+    const [tumorFile, setTumorFile] = useState(null);
+    const [analyzing, setAnalyzing] = useState(false);
+    const [tumorResult, setTumorResult] = useState(null);
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -78,7 +126,7 @@ const DoctorDashboard = () => {
 
     // --- Record Logic ---
     const addMedicineField = () => {
-        setMedicines([...medicines, { name: '', dosage: '', frequency: '', duration: '', system: 'Allopathy' }]);
+        setMedicines([...medicines, { name: '', dosage: '', frequency: '', duration: '', system: 'Allopathy', therapeuticClass: '', arushCode: '', ayurvedaEquivalent: '' }]);
     };
 
     const removeMedicineField = (index) => {
@@ -90,6 +138,20 @@ const DoctorDashboard = () => {
     const handleMedicineChange = (index, field, value) => {
         const newMedicines = [...medicines];
         newMedicines[index][field] = value;
+        
+        if (field === 'name') {
+            const kbEntry = medicineKnowledgeBase[value.toLowerCase().trim()];
+            if (kbEntry) {
+                newMedicines[index].therapeuticClass = kbEntry.therapeuticClass;
+                newMedicines[index].arushCode = kbEntry.arushCode;
+                newMedicines[index].ayurvedaEquivalent = kbEntry.ayurvedaEquivalent;
+            } else {
+                newMedicines[index].therapeuticClass = '';
+                newMedicines[index].arushCode = '';
+                newMedicines[index].ayurvedaEquivalent = '';
+            }
+        }
+        
         setMedicines(newMedicines);
     };
 
@@ -111,7 +173,7 @@ const DoctorDashboard = () => {
             toast.success('Medical record added successfully!');
             // Reset form
             setDiagnosis('');
-            setMedicines([{ name: '', dosage: '', frequency: '', duration: '', system: 'Allopathy' }]);
+            setMedicines([{ name: '', dosage: '', frequency: '', duration: '', system: 'Allopathy', therapeuticClass: '', arushCode: '', ayurvedaEquivalent: '' }]);
             setNotes('');
             setSearchedPatient(null);
             setSearchId('');
@@ -158,6 +220,42 @@ const DoctorDashboard = () => {
         }
     };
 
+    // --- Brain Tumor Analysis Logic ---
+    const handleTumorFileChange = (e) => {
+        setTumorFile(e.target.files[0]);
+        setTumorResult(null); // Reset previous result
+    };
+
+    const handleAnalyzeTumor = async (e) => {
+        e.preventDefault();
+        if (!tumorFile || !searchedPatient) return;
+
+        const formData = new FormData();
+        formData.append('file', tumorFile);
+        formData.append('patientHealthId', searchedPatient.healthId);
+
+        setAnalyzing(true);
+        try {
+            const token = localStorage.getItem('token');
+            const res = await axios.post('http://localhost:5000/api/ai/brain-tumor/analyze', formData, {
+                headers: { 
+                    Authorization: token,
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+            setTumorResult(res.data.data);
+            toast.success('Analysis complete!');
+            
+            // Refresh reports to show the scan record if needed (optional)
+            // fetchReports(); 
+        } catch (err) {
+            console.error(err);
+            toast.error(err.response?.data?.message || 'Analysis failed');
+        } finally {
+            setAnalyzing(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-slate-50 flex font-sans">
             <Toaster position="top-right" />
@@ -170,12 +268,41 @@ const DoctorDashboard = () => {
                         </div>
                         <span className="text-xl font-bold">NeuroLink</span>
                     </div>
+                     <span className="text-xs text-slate-500 font-medium tracking-widest uppercase mt-2 block">Doctor Portal</span>
                 </div>
                 
-                <nav className="p-4 space-y-2">
-                    <a href="#" className="flex items-center gap-3 px-4 py-3 bg-primary text-white rounded-xl font-medium shadow-lg shadow-primary/20">
-                        <LayoutDashboard size={20} /> Dashboard
-                    </a>
+                <nav className="p-4 space-y-1">
+                    <button onClick={() => navigate('/doctor-dashboard')} className="w-full flex items-center gap-3 px-4 py-3 bg-primary text-white rounded-xl font-medium shadow-lg shadow-primary/20 transition hover:bg-primary/90">
+                        <LayoutDashboard size={18} /> Dashboard
+                    </button>
+                    
+                    <div className="pt-4 pb-2 px-4">
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Patient Management</p>
+                    </div>
+
+                    <button 
+                         onClick={() => {
+                             // Focus search input logic or navigation could go here
+                             document.getElementById('patient-search-input')?.focus();
+                         }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-white/5 hover:text-white rounded-xl font-medium transition"
+                    >
+                        <Search size={18} /> Patient Search
+                    </button>
+
+                    
+
+                    <div className="pt-4 pb-2 px-4">
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Clinical AI</p>
+                    </div>
+
+                    <button onClick={() => navigate('/doctor/ai-hub')} className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-white/5 hover:text-white rounded-xl font-medium transition">
+                        <Brain size={18} /> AI Diagnostics
+                    </button>
+
+                     <button className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-white/5 hover:text-white rounded-xl font-medium transition">
+                        <Activity size={18} /> Reports Review
+                    </button>
                 </nav>
 
                 <div className="absolute bottom-0 w-full p-6 border-t border-white/5">
@@ -204,6 +331,7 @@ const DoctorDashboard = () => {
                         </h2>
                         <form onSubmit={handleSearch} className="flex gap-4">
                             <input 
+                                id="patient-search-input"
                                 type="text" 
                                 value={searchId}
                                 onChange={(e) => setSearchId(e.target.value)}
@@ -368,6 +496,13 @@ const DoctorDashboard = () => {
                                                                     <Trash2 size={16} />
                                                                 </button>
                                                             )}
+                                                            {med.arushCode && (
+                                                                <div className="w-full mt-2 bg-slate-100 p-2 rounded-lg flex gap-2 text-xs text-slate-600">
+                                                                    <span className="font-bold text-emerald-600">ARUSH Code:</span> {med.arushCode} | 
+                                                                    <span className="font-bold">Class:</span> {med.therapeuticClass} | 
+                                                                    <span className="font-bold text-primary">Ayurveda Equivalent:</span> {med.ayurvedaEquivalent}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     ))}
                                                 </div>
@@ -466,9 +601,38 @@ const DoctorDashboard = () => {
                                                         {rec.medicines && rec.medicines.length > 0 && (
                                                             <div className="mt-2 space-y-1">
                                                                 {rec.medicines.map((med, i) => (
-                                                                    <div key={i} className="text-sm text-slate-600 flex gap-2">
-                                                                        <span className="font-medium text-dark">• {med.name}</span>
-                                                                        <span className="text-slate-400">({med.dosage}, {med.frequency})</span>
+                                                                    <div key={i} className="text-sm text-slate-600 flex flex-col gap-2 mb-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                                                                        <div className="flex gap-2 items-center mb-1">
+                                                                            <span className="font-bold text-dark text-base">{i + 1}️⃣ {med.name}</span>
+                                                                        </div>
+                                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-4 ml-4">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <span className="text-slate-500 font-semibold w-32">Dosage:</span>
+                                                                                <span className="text-dark">{med.dosage} – {med.frequency}</span>
+                                                                            </div>
+                                                                            <div className="flex items-center gap-2">
+                                                                                <span className="text-slate-500 font-semibold w-32">Medical System:</span>
+                                                                                <span className="text-dark">{med.system}</span>
+                                                                            </div>
+                                                                            {med.therapeuticClass && (
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <span className="text-slate-500 font-semibold w-32">Therapeutic Class:</span>
+                                                                                    <span className="text-dark">{med.therapeuticClass}</span>
+                                                                                </div>
+                                                                            )}
+                                                                            {med.arushCode && (
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <span className="text-slate-500 font-semibold w-32">ARUSH Code:</span>
+                                                                                    <span className="text-emerald-600 font-bold">{med.arushCode}</span>
+                                                                                </div>
+                                                                            )}
+                                                                            {med.ayurvedaEquivalent && (
+                                                                                <div className="flex items-center gap-2 md:col-span-2 bg-amber-50/50 p-2 rounded-lg mt-1 border border-amber-100/50">
+                                                                                    <span className="text-slate-600 font-semibold w-32">Ayurveda Equivalent:</span>
+                                                                                    <span className="text-amber-700 italic">{med.ayurvedaEquivalent} <span className="text-[10px] text-amber-600/70 ml-1">(Equivalent Reference)</span></span>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
                                                                     </div>
                                                                 ))}
                                                             </div>
@@ -511,6 +675,86 @@ const DoctorDashboard = () => {
                                                 ))}
                                             </div>
                                         )}
+                                    </div>
+                                )}
+
+                                {activeTab === 'brain_tumor' && (
+                                    <div className="p-8">
+                                        <h3 className="text-lg font-bold text-dark mb-6 flex items-center gap-2">
+                                            <Brain className="text-purple-600" /> AI Brain Tumor Analysis
+                                        </h3>
+                                        
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            {/* Upload Section */}
+                                            <div>
+                                                <form onSubmit={handleAnalyzeTumor} className="space-y-6">
+                                                    <div className="border-2 border-dashed border-purple-200 rounded-xl p-8 text-center hover:bg-purple-50 transition cursor-pointer relative bg-purple-50/30">
+                                                        <input 
+                                                            type="file" 
+                                                            onChange={handleTumorFileChange}
+                                                            accept="image/*"
+                                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                                        />
+                                                        <div className="flex flex-col items-center gap-2 pointer-events-none">
+                                                            <div className="bg-purple-100 p-4 rounded-full text-purple-600">
+                                                                <Brain size={32} />
+                                                            </div>
+                                                            <p className="font-medium text-dark">{tumorFile ? tumorFile.name : 'Upload MRI Scan'}</p>
+                                                            <p className="text-sm text-secondary">Supports JPG, PNG (Max 5MB)</p>
+                                                        </div>
+                                                    </div>
+
+                                                    <button 
+                                                        type="submit" 
+                                                        disabled={!tumorFile || analyzing}
+                                                        className="w-full px-8 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition shadow-lg shadow-purple-600/20 flex items-center justify-center gap-2 disabled:opacity-50"
+                                                    >
+                                                        {analyzing ? (
+                                                            <>
+                                                                <Activity className="animate-spin" /> Analyzing...
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Brain size={20} /> Convert & Analyze
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                </form>
+                                            </div>
+
+                                            {/* Result Section */}
+                                            <div className="bg-slate-50 rounded-xl border border-slate-200 p-6 flex flex-col justify-center items-center text-center">
+                                                {!tumorResult ? (
+                                                    <div className="text-secondary space-y-2 opacity-50">
+                                                        <Brain size={48} className="mx-auto text-slate-300" />
+                                                        <p>Upload a scan to see AI predictions.</p>
+                                                    </div>
+                                                ) : (
+                                                    <div className="space-y-6 w-full animate-fadeIn">
+                                                        <div className={`text-4xl font-bold ${tumorResult.tumorType === 'No Tumor' ? 'text-green-500' : 'text-red-500'}`}>
+                                                            {tumorResult.tumorType}
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <div className="flex justify-between text-sm font-medium text-secondary">
+                                                                <span>Confidence</span>
+                                                                <span>{(tumorResult.confidence * 100).toFixed(1)}%</span>
+                                                            </div>
+                                                            <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
+                                                                <div 
+                                                                    className={`h-full rounded-full ${tumorResult.tumorType === 'No Tumor' ? 'bg-green-500' : 'bg-red-500'}`}
+                                                                    style={{ width: `${tumorResult.confidence * 100}%` }}
+                                                                ></div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="bg-white p-4 rounded-xl border border-slate-100 text-left text-sm text-secondary shadow-sm">
+                                                            <p className="font-semibold text-dark mb-1">AI Disclaimer:</p>
+                                                            This analysis is generated by an AI model and should be used for assistance only. Please verify with clinical correlation.
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
 

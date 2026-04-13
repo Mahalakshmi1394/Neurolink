@@ -9,7 +9,7 @@ const Signup = () => {
   const [formData, setFormData] = useState({
       name: '', email: '', password: '', 
       age: '', gender: 'Male', phone: '', 
-      specialization: 'Neurologist', hospital: '', registrationId: ''
+      specialization: 'Neurologist', hospital: '', registrationId: '', licenseId: ''
   });
   const navigate = useNavigate();
 
@@ -139,14 +139,18 @@ const Signup = () => {
                                     <option>Psychiatrist</option>
                                 </select>
                             </div>
+                            <div>
+                                <label className="block text-sm font-medium text-secondary mb-1">Hospital Name</label>
+                                <input name="hospital" onChange={handleChange} required type="text" className="w-full px-4 py-2 border border-slate-200 rounded-lg outline-none focus:border-primary" placeholder="City General" />
+                            </div>
                             <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-secondary mb-1">Hospital Name</label>
-                                    <input name="hospital" onChange={handleChange} required type="text" className="w-full px-4 py-2 border border-slate-200 rounded-lg outline-none focus:border-primary" placeholder="City General" />
-                                </div>
                                 <div>
                                     <label className="block text-sm font-medium text-secondary mb-1">Registration ID</label>
                                     <input name="registrationId" onChange={handleChange} required type="text" className="w-full px-4 py-2 border border-slate-200 rounded-lg outline-none focus:border-primary" placeholder="REG-12345" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-secondary mb-1">License ID</label>
+                                    <input name="licenseId" onChange={handleChange} required type="text" className="w-full px-4 py-2 border border-slate-200 rounded-lg outline-none focus:border-primary" placeholder="LIC-98765" />
                                 </div>
                             </div>
                         </>
